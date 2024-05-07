@@ -1,7 +1,4 @@
-## =======!! ALERT ALERT !!=======
-## NOALBS V1 IS NO LONGER MAINTAINED OR SUPPORTED
-## PLEASE USE V2 => [[HERE]](https://github.com/715209/nginx-obs-automatic-low-bitrate-switching/releases/latest)
-## =======!! ALERT ALERT !!=======
+# This is a (partially) maintained fork of the original version of NOALBS for rtmp. Feel free to submit a PR, if something doesn't work as expected
 
 ```
     ███╗   ██╗ ██████╗  █████╗ ██╗     ██████╗ ███████╗
@@ -24,7 +21,7 @@ NOALBS is used as a DIY tool to have your OBS Studio/OBS.Live auto switch scenes
 - There is literally NO COST to you when you setup and use NOALBS using the equipment you already own and pay for.
 
 ## Downsides to using NOALBS:
-- It's DIY, meaning you have to do it all yourself, of course you can always contact us on discord @ b3ck#3517 or 715209#0600 and we'll do our best to help out.
+- It's DIY, meaning you have to do it all yourself.
 - If you lose power or internet where you run NOALBS there is no redundancy.
 - It takes a bit to setup, it is not for the faint of heart when it comes to installing and configuring advanced programs to get it running.
 
@@ -86,7 +83,7 @@ Node-Media-Server is also built into NOALBS for an easy all-in-one streaming sol
 ## Installation from Source and NGINX Setup
 
 -   Open your operating systems command prompt or terminal
--   `git clone <repository-url>` or download from [RELEASES](https://github.com/715209/nginx-obs-automatic-low-bitrate-switching/releases/tag/v1.9.5)
+-   `git clone <repository-url>`
 -   Change into the new directory. To do this in the same command window or terminal type:
 
     `cd nginx-obs-automatic-low-bitrate-switching`
