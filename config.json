@@ -1,6 +1,6 @@
 {
     "obs": {
-        "ip": "localhost:4444",
+        "ip": "localhost:4455",
         "password": "password",
         "normalScene": "Screen",
         "offlineScene": "BRB",

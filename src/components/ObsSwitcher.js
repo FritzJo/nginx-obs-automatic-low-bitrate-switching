@@ -27,7 +27,7 @@ class ObsSwitcher extends EventEmitter {
 
         this.obs = new OBSWebSocket();
         this.isLive = false;
-        this.address = address;
+        this.address = "ws://" + address;
         this.password = password;
         this.lowBitrateScene = low;
         this.normalScene = normal;
@@ -37,7 +37,6 @@ class ObsSwitcher extends EventEmitter {
         this.bitrate = null;
         this.nginxVideoMeta = null;
         this.streamStatus = null;
-        this.heartbeat = null;
         this.obsStreaming = false;
         this.currentScene = null;
         this.nginxSettings;
@@ -45,9 +44,13 @@ class ObsSwitcher extends EventEmitter {
         this.scenes = null;
 
         this.obs
-            .connect({ address: this.address, password: this.password })
+            .connect(this.address, this.password) //{ address: this.address, password: this.password }
+            .then(() => {
+                this.onAuth();
+            })
             .catch((e) => {
                 // handle this somewhere else
+                log.info(e);
             });
 
         this.obs.on("ConnectionClosed", this.onDisconnect.bind(this));
@@ -57,7 +60,6 @@ class ObsSwitcher extends EventEmitter {
         this.obs.on("StreamStatus", this.setStreamStatus.bind(this));
         this.obs.on("StreamStopped", this.streamStopped.bind(this));
         this.obs.on("StreamStarted", this.streamStarted.bind(this));
-        this.obs.on("Heartbeat", this.handleHeartbeat.bind(this));
         this.obs.on("ScenesChanged", this.scenesChanged.bind(this));
 
         log.info("Connecting & authenticating");
@@ -82,7 +84,7 @@ class ObsSwitcher extends EventEmitter {
                     canSwitch &&
                     (bitrate === 0 &&
                         currentScene.name !== this.previousScene &&
-                        (this.obs.send("SetCurrentScene", {
+                        (this.obs.call("SetCurrentProgramScene", {
                             "scene-name": this.previousScene,
                         }),
                         this.switchSceneEmit("live", this.previousScene),
@@ -93,7 +95,7 @@ class ObsSwitcher extends EventEmitter {
                         bitrate <= this.lowBitrateTrigger &&
                         currentScene.name !== this.lowBitrateScene &&
                         bitrate !== 0 &&
-                        (this.obs.send("SetCurrentScene", {
+                        (this.obs.call("SetCurrentProgramScene", {
                             "scene-name": this.lowBitrateScene,
                         }),
                         (this.previousScene = this.lowBitrateScene),
@@ -105,7 +107,7 @@ class ObsSwitcher extends EventEmitter {
                         bitrate > this.lowBitrateTrigger &&
                         currentScene.name !== this.lowBitrateScene &&
                         bitrate !== 0 &&
-                        (this.obs.send("SetCurrentScene", {
+                        (this.obs.call("SetCurrentProgramScene", {
                             "scene-name": this.lowBitrateScene,
                         }),
                         (this.previousScene = this.lowBitrateScene),
@@ -116,7 +118,7 @@ class ObsSwitcher extends EventEmitter {
                     rtt < this.highRttTrigger &&
                         bitrate > this.lowBitrateTrigger &&
                         currentScene.name !== this.normalScene &&
-                        (this.obs.send("SetCurrentScene", {
+                        (this.obs.call("SetCurrentProgramScene", {
                             "scene-name": this.normalScene,
                         }),
                         (this.previousScene = this.normalScene),
@@ -129,7 +131,7 @@ class ObsSwitcher extends EventEmitter {
                     canSwitch &&
                     (bitrate === 0 &&
                         currentScene.name !== this.previousScene &&
-                        (this.obs.send("SetCurrentScene", {
+                        (this.obs.call("SetCurrentProgramScene", {
                             "scene-name": this.previousScene,
                         }),
                         this.switchSceneEmit("live", this.previousScene),
@@ -139,7 +141,7 @@ class ObsSwitcher extends EventEmitter {
                     bitrate <= this.lowBitrateTrigger &&
                         currentScene.name !== this.lowBitrateScene &&
                         bitrate !== 0 &&
-                        (this.obs.send("SetCurrentScene", {
+                        (this.obs.call("SetCurrentProgramScene", {
                             "scene-name": this.lowBitrateScene,
                         }),
                         (this.previousScene = this.lowBitrateScene),
@@ -149,7 +151,7 @@ class ObsSwitcher extends EventEmitter {
                         )),
                     bitrate > this.lowBitrateTrigger &&
                         currentScene.name !== this.normalScene &&
-                        (this.obs.send("SetCurrentScene", {
+                        (this.obs.call("SetCurrentProgramScene", {
                             "scene-name": this.normalScene,
                         }),
                         (this.previousScene = this.normalScene),
@@ -163,7 +165,7 @@ class ObsSwitcher extends EventEmitter {
 
             canSwitch &&
                 currentScene.name !== this.offlineScene &&
-                (this.obs.send("SetCurrentScene", {
+                (this.obs.call("SetCurrentProgramScene", {
                     "scene-name": this.offlineScene
                 }),
                 this.switchSceneEmit("offlineScene"),
@@ -176,7 +178,6 @@ class ObsSwitcher extends EventEmitter {
 
     onAuth() {
         log.success(`Successfully connected`);
-        this.obs.send("SetHeartbeat", { enable: true });
         this.getSceneList();
 
         this.interval = setInterval(
@@ -340,7 +341,7 @@ class ObsSwitcher extends EventEmitter {
         const { canSwitch } = await this.canSwitch();
 
         if (canSwitch) {
-            this.obs.send("SetCurrentScene", {
+            this.obs.call("SetCurrentProgramScene", {
                 "scene-name": this.offlineScene,
             });
         }
@@ -351,7 +352,7 @@ class ObsSwitcher extends EventEmitter {
     }
 
     async getSceneList() {
-        const list = await this.obs.send("GetSceneList");
+        const list = await this.obs.call("GetSceneList");
         this.scenes = list.scenes;
     }
 
@@ -359,13 +360,8 @@ class ObsSwitcher extends EventEmitter {
         this.getSceneList();
     }
 
-    handleHeartbeat(heartbeat) {
-        this.heartbeat = heartbeat;
-        this.obsStreaming = heartbeat.streaming;
-    }
-
     async canSwitch() {
-        const currentScene = await this.obs.send("GetCurrentScene");
+        const currentScene = await this.obs.call("GetCurrentScene");
         const canSwitch =
             currentScene.name == this.lowBitrateScene ||
             currentScene.name == this.normalScene ||
