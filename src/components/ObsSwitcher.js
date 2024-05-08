@@ -72,7 +72,7 @@ class ObsSwitcher extends EventEmitter {
 
         const [bitrate, rtt] = await this.getBitrate();
         const { currentScene, canSwitch } = await this.canSwitch();
-        console.log("STATUS: " + bitrate);
+        log.info("Current Bitrate: " + bitrate)
         if (bitrate !== null) {
             this.isLive = true;
 
@@ -159,8 +159,6 @@ class ObsSwitcher extends EventEmitter {
             }
         } else {
             this.isLive = false;
-
-            console.log("CHECKING STATUSSSSSSSSSSSS OFFLINE --> " + canSwitch);
             canSwitch &&
                 currentScene.name !== this.offlineScene &&
                 (this.obs.call("SetCurrentProgramScene", {
@@ -361,8 +359,7 @@ class ObsSwitcher extends EventEmitter {
 
     async canSwitch() {
         await this.getSceneList();
-        const currentScene = this.currentScene //await this.obs.call("GetCurrentScene");
-        console.log("Current: " + currentScene);
+        const currentScene = this.currentScene;
         const canSwitch =
             currentScene == this.lowBitrateScene ||
             currentScene == this.normalScene ||
