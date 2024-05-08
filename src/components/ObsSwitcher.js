@@ -45,16 +45,13 @@ class ObsSwitcher extends EventEmitter {
 
         this.obs
             .connect(this.address, this.password) //{ address: this.address, password: this.password }
-            .then(() => {
-                this.onAuth();
-            })
             .catch((e) => {
                 // handle this somewhere else
                 log.info(e);
             });
 
         this.obs.on("ConnectionClosed", this.onDisconnect.bind(this));
-        this.obs.on("AuthenticationSuccess", this.onAuth.bind(this));
+        this.obs.on("Identified", this.onAuth.bind(this));
         this.obs.on("AuthenticationFailure", this.onAuthFail.bind(this));
         this.obs.on("error", this.error.bind(this));
         this.obs.on("StreamStatus", this.setStreamStatus.bind(this));
@@ -75,7 +72,7 @@ class ObsSwitcher extends EventEmitter {
 
         const [bitrate, rtt] = await this.getBitrate();
         const { currentScene, canSwitch } = await this.canSwitch();
-
+        console.log("STATUS: " + bitrate);
         if (bitrate !== null) {
             this.isLive = true;
 
@@ -85,7 +82,7 @@ class ObsSwitcher extends EventEmitter {
                     (bitrate === 0 &&
                         currentScene.name !== this.previousScene &&
                         (this.obs.call("SetCurrentProgramScene", {
-                            "scene-name": this.previousScene,
+                            "sceneName": this.previousScene,
                         }),
                         this.switchSceneEmit("live", this.previousScene),
                         log.info(
@@ -96,7 +93,7 @@ class ObsSwitcher extends EventEmitter {
                         currentScene.name !== this.lowBitrateScene &&
                         bitrate !== 0 &&
                         (this.obs.call("SetCurrentProgramScene", {
-                            "scene-name": this.lowBitrateScene,
+                            "sceneName": this.lowBitrateScene,
                         }),
                         (this.previousScene = this.lowBitrateScene),
                         this.switchSceneEmit("lowBitrateScene"),
@@ -108,7 +105,7 @@ class ObsSwitcher extends EventEmitter {
                         currentScene.name !== this.lowBitrateScene &&
                         bitrate !== 0 &&
                         (this.obs.call("SetCurrentProgramScene", {
-                            "scene-name": this.lowBitrateScene,
+                            "sceneName": this.lowBitrateScene,
                         }),
                         (this.previousScene = this.lowBitrateScene),
                         this.switchSceneEmit("lowBitrateScene"),
@@ -119,7 +116,7 @@ class ObsSwitcher extends EventEmitter {
                         bitrate > this.lowBitrateTrigger &&
                         currentScene.name !== this.normalScene &&
                         (this.obs.call("SetCurrentProgramScene", {
-                            "scene-name": this.normalScene,
+                            "sceneName": this.normalScene,
                         }),
                         (this.previousScene = this.normalScene),
                         this.switchSceneEmit("normalScene"),
@@ -132,7 +129,7 @@ class ObsSwitcher extends EventEmitter {
                     (bitrate === 0 &&
                         currentScene.name !== this.previousScene &&
                         (this.obs.call("SetCurrentProgramScene", {
-                            "scene-name": this.previousScene,
+                            "sceneName": this.previousScene,
                         }),
                         this.switchSceneEmit("live", this.previousScene),
                         log.info(
@@ -142,7 +139,7 @@ class ObsSwitcher extends EventEmitter {
                         currentScene.name !== this.lowBitrateScene &&
                         bitrate !== 0 &&
                         (this.obs.call("SetCurrentProgramScene", {
-                            "scene-name": this.lowBitrateScene,
+                            "sceneName": this.lowBitrateScene,
                         }),
                         (this.previousScene = this.lowBitrateScene),
                         this.switchSceneEmit("lowBitrateScene"),
@@ -152,7 +149,7 @@ class ObsSwitcher extends EventEmitter {
                     bitrate > this.lowBitrateTrigger &&
                         currentScene.name !== this.normalScene &&
                         (this.obs.call("SetCurrentProgramScene", {
-                            "scene-name": this.normalScene,
+                            "sceneName": this.normalScene,
                         }),
                         (this.previousScene = this.normalScene),
                         this.switchSceneEmit("normalScene"),
@@ -163,10 +160,11 @@ class ObsSwitcher extends EventEmitter {
         } else {
             this.isLive = false;
 
+            console.log("CHECKING STATUSSSSSSSSSSSS OFFLINE --> " + canSwitch);
             canSwitch &&
                 currentScene.name !== this.offlineScene &&
                 (this.obs.call("SetCurrentProgramScene", {
-                    "scene-name": this.offlineScene
+                    "sceneName": this.offlineScene
                 }),
                 this.switchSceneEmit("offlineScene"),
                 (this.streamStatus = null),
@@ -342,7 +340,7 @@ class ObsSwitcher extends EventEmitter {
 
         if (canSwitch) {
             this.obs.call("SetCurrentProgramScene", {
-                "scene-name": this.offlineScene,
+                "sceneName": this.offlineScene,
             });
         }
     }
@@ -353,7 +351,8 @@ class ObsSwitcher extends EventEmitter {
 
     async getSceneList() {
         const list = await this.obs.call("GetSceneList");
-        this.scenes = list.scenes;
+        this.scenes = list.scenes.map(scene => scene.sceneName);;
+        this.currentScene = list.currentProgramSceneName;
     }
 
     scenesChanged() {
@@ -361,14 +360,15 @@ class ObsSwitcher extends EventEmitter {
     }
 
     async canSwitch() {
-        const currentScene = await this.obs.call("GetCurrentScene");
+        await this.getSceneList();
+        const currentScene = this.currentScene //await this.obs.call("GetCurrentScene");
+        console.log("Current: " + currentScene);
         const canSwitch =
-            currentScene.name == this.lowBitrateScene ||
-            currentScene.name == this.normalScene ||
-            currentScene.name == this.offlineScene;
+            currentScene == this.lowBitrateScene ||
+            currentScene == this.normalScene ||
+            currentScene == this.offlineScene;
 
         this.currentScene = currentScene.name;
-
         return { currentScene, canSwitch };
     }
 }
