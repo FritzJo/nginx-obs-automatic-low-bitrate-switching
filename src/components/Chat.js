@@ -17,7 +17,8 @@ class Chat {
     constructor(username, password, channel, obs) {
         this.username = username.toLowerCase(); // username
         this.password = password; // oauth
-        this.channel = `#${channel.toLowerCase()}`; // #channel
+        const c = channel.toLowerCase();
+        this.channel = '#' + c; // #channel
         this.obsProps = obs;
         this.obs = obs.obs;
         this.prefix = config.twitchChat.prefix;
@@ -275,7 +276,7 @@ class Chat {
     async start() {
         // start streaming
         try {
-            await this.obs.send("StartStreaming");
+            await this.obs.call("StartStream");
             this.say(this.locale.start.success);
         } catch (e) {
             log.error(e);
@@ -290,7 +291,7 @@ class Chat {
     async stop() {
         // stop streaming
         try {
-            await this.obs.send("StopStreaming");
+            await this.obs.call("StopStream");
             this.say(this.locale.stop.success);
         } catch (e) {
             log.error(e.error);
@@ -324,7 +325,7 @@ class Chat {
     async startStopRec(bool) {
         if (bool) {
             try {
-                const res = await this.obs.send("StartRecording");
+                const res = await this.obs.call("StartRecording");
                 if (res.status === "ok") this.say(`[REC] ${this.locale.rec.started}`);
                 log.success(`Started recording`);
             } catch (error) {
@@ -350,19 +351,17 @@ class Chat {
     }
 
     async switch(sceneName) {
+        log.info("Trying to switch to: " + sceneName);
         if (sceneName == null) return this.say(this.locale.switch.error);
 
-        const res = search(sceneName, this.obsProps.scenes, { keySelector: obj => obj.name });
-        const scene = res.length > 0 ? res[0].name : sceneName;
-
         try {
-            await this.obs.send("SetCurrentScene", {
-                "scene-name": scene
+            await this.obs.call("SetCurrentProgramScene", {
+                "sceneName": sceneName,
             });
 
             this.say(
                 format(this.locale.switch.success, {
-                    scene
+                    sceneName
                 })
             );
         } catch (e) {
@@ -431,15 +430,15 @@ class Chat {
 
                 if (lastScene == null) return this.say(this.locale.refresh.error);
 
-                await this.obs.send("SetCurrentScene", {
-                    "scene-name": config.obs.refreshScene
+                await this.obs.call("SetCurrentProgramScene", {
+                    "sceneName": config.obs.refreshScene
                 });
                 this.say(this.locale.refresh.success);
                 this.isRefreshing = true;
 
                 setTimeout(() => {
-                    this.obs.send("SetCurrentScene", {
-                        "scene-name": lastScene
+                    this.obs.call("SetCurrentProgramScene", {
+                        "sceneName": lastScene
                     });
                     this.say(this.locale.refresh.done);
                     this.isRefreshing = false;
